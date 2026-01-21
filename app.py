@@ -4,12 +4,8 @@
 
 import streamlit as st        # Helps to load Streamlit libraries that converts Python script to interactive web apps
 import pandas as pd
-import joblib
+from sklearn.ensemble import GradientBoostingRegressor
 
-
-# Load Model
-
-model = joblib.load('pipeline.pkl')
 
 
 # Streamlit App
