@@ -12,8 +12,7 @@ st.title("🚲 Bike Sharing Demand Prediction & Analytics")
 # 1. Load Dataset
 # =============================
 df = pd.read_csv("Dataset.csv")
-st.write("📄 Dataset Columns:")
-st.write(list(df.columns))
+
 
 # =============================
 # 2. Target & Feature Selection
@@ -156,4 +155,5 @@ if selected_cat != "None":
 # Footer
 # -------------------------------------------------
 st.markdown("---")
+
 st.caption("Created by Group -1 | CHANAKYA, KRISHNA et al. | Built with Streamlit & Random Forest Regressor")
