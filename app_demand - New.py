@@ -13,8 +13,6 @@ st.title("🚲 Bike Sharing Demand Prediction")
 # =============================
 df = pd.read_csv("Dataset.csv")
 
-st.write("📄 Dataset Columns:")
-st.write(list(df.columns))
 
 # =============================
 # 2. Target & Feature Selection
@@ -130,4 +128,5 @@ st.pyplot(plt)
 # Footer
 # -------------------------------------------------
 st.markdown("---")
+
 st.caption("Created by Group -1 | CHANAKYA, KRISHNA et al. | Built with Streamlit & Random Forest Regressor")
