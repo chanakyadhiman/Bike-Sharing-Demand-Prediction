@@ -26,7 +26,7 @@ if "windspeed" in df.columns:
     df["windspeed"] = pd.to_numeric(df["windspeed"], errors="coerce") * 67
 
 # =============================
-# Month mapping
+# Mapping dictionaries
 # =============================
 month_map = {
     1: "January", 2: "February", 3: "March", 4: "April",
@@ -34,13 +34,6 @@ month_map = {
     9: "September", 10: "October", 11: "November", 12: "December"
 }
 
-if "mnth" in df.columns:
-    df["mnth"] = pd.to_numeric(df["mnth"], errors="coerce")
-    df["mnth"] = df["mnth"].map(month_map)
-
-# =============================
-# Season mapping
-# =============================
 season_map = {
     1: "Spring",
     2: "Summer",
@@ -48,13 +41,6 @@ season_map = {
     4: "Winter"
 }
 
-if "season" in df.columns:
-    df["season"] = pd.to_numeric(df["season"], errors="coerce")
-    df["season"] = df["season"].map(season_map)
-
-# =============================
-# Weekday mapping
-# =============================
 weekday_map = {
     0: "Sunday",
     1: "Monday",
@@ -64,6 +50,17 @@ weekday_map = {
     5: "Friday",
     6: "Saturday"
 }
+
+# =============================
+# Apply mappings safely
+# =============================
+if "mnth" in df.columns:
+    df["mnth"] = pd.to_numeric(df["mnth"], errors="coerce")
+    df["mnth"] = df["mnth"].map(month_map)
+
+if "season" in df.columns:
+    df["season"] = pd.to_numeric(df["season"], errors="coerce")
+    df["season"] = df["season"].map(season_map)
 
 if "weekday" in df.columns:
     df["weekday"] = pd.to_numeric(df["weekday"], errors="coerce")
@@ -84,9 +81,17 @@ features = [f for f in features if f in df.columns]
 df = df[features + [target]]
 
 # =============================
-# Drop NaNs BEFORE encoding
+# Drop NaNs ONLY for required columns
 # =============================
-df = df.dropna()
+df = df.dropna(subset=features + [target])
+
+# =============================
+# Safety check (VERY IMPORTANT)
+# =============================
+if df.shape[0] < 20:
+    st.error("❌ Not enough valid rows after cleaning. Please check Dataset.csv format.")
+    st.write("Rows left:", df.shape[0])
+    st.stop()
 
 # =============================
 # Encode categorical columns
@@ -97,11 +102,11 @@ label_encoders = {}
 for col in categorical_cols:
     if col in df.columns:
         le = LabelEncoder()
-        df[col] = le.fit_transform(df[col])
+        df[col] = le.fit_transform(df[col].astype(str))
         label_encoders[col] = le
 
 # =============================
-# Force numeric
+# Ensure numeric
 # =============================
 for col in df.columns:
     df[col] = pd.to_numeric(df[col], errors="coerce")
@@ -187,22 +192,9 @@ ax1.set_xlabel("Month")
 ax1.set_ylabel("Bike Demand")
 st.pyplot(fig1)
 
-fig2, ax2 = plt.subplots()
-df.groupby("weekday")["cnt"].mean().reindex(weekday_order).plot(kind="bar", ax=ax2)
-ax2.set_title("Average Bike Demand per Weekday")
-ax2.set_xlabel("Weekday")
-ax2.set_ylabel("Bike Demand")
-st.pyplot(fig2)
+f
 
-fig3, ax3 = plt.subplots()
-ax3.scatter(df["temp"], df["cnt"])
-ax3.set_title("Temperature vs Bike Demand")
-ax3.set_xlabel("Temperature (°C)")
-ax3.set_ylabel("Bike Demand")
-st.pyplot(fig3)
 
 st.markdown("---")
 st.caption("Bike Demand Prediction System | Streamlit + Random Forest")
 
-st.markdown("---")
-st.caption("Bike Demand Prediction System | Streamlit + Random Forest + Plotly")
