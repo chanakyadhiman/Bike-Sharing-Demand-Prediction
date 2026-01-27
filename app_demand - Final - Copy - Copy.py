@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
+import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
@@ -176,22 +176,35 @@ if st.button("🚀 Predict Bike Demand"):
     st.success(f"🚴 Predicted Bike Demand: **{int(prediction[0])} bikes**")
 
 # =============================
-# INTERACTIVE GRAPHS
+# GRAPHS (Matplotlib)
 # =============================
-st.subheader("📊 Interactive Data Visualizations")
+st.subheader("📊 Data Visualizations")
 
-col1, col2 = st.columns(2)
+fig1, ax1 = plt.subplots()
+df.groupby("mnth")["cnt"].mean().reindex(month_order).plot(kind="bar", ax=ax1)
+ax1.set_title("Average Bike Demand per Month")
+ax1.set_xlabel("Month")
+ax1.set_ylabel("Bike Demand")
+st.pyplot(fig1)
 
-with col1:
-    fig1 = px.bar(df, x="mnth", y="cnt", title="Average Bike Demand per Month")
-    st.plotly_chart(fig1, use_container_width=True)
+fig2, ax2 = plt.subplots()
+df.groupby("weekday")["cnt"].mean().reindex(weekday_order).plot(kind="bar", ax=ax2)
+ax2.set_title("Average Bike Demand per Weekday")
+ax2.set_xlabel("Weekday")
+ax2.set_ylabel("Bike Demand")
+st.pyplot(fig2)
 
-with col2:
-    fig2 = px.bar(df, x="weekday", y="cnt", title="Average Bike Demand per Weekday")
-    st.plotly_chart(fig2, use_container_width=True)
+fig3, ax3 = plt.subplots()
+ax3.scatter(df["temp"], df["cnt"])
+ax3.set_title("Temperature vs Bike Demand")
+ax3.set_xlabel("Temperature (°C)")
+ax3.set_ylabel("Bike Demand")
+st.pyplot(fig3)
 
-fig3 = px.scatter(df, x="temp", y="cnt", title="Temperature vs Bike Demand")
-st.plotly_chart(fig3, use_container_width=True)
+st.markdown("---")
+st.caption("Bike Demand Prediction System | Streamlit + Random Forest")
+
 
 st.markdown("---")
 st.caption("Bike Demand Prediction System | Streamlit + Random Forest + Plotly")
+
