@@ -204,7 +204,5 @@ st.pyplot(fig3)
 st.markdown("---")
 st.caption("Bike Demand Prediction System | Streamlit + Random Forest")
 
-
 st.markdown("---")
 st.caption("Bike Demand Prediction System | Streamlit + Random Forest + Plotly")
-
