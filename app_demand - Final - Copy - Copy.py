@@ -3,7 +3,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
 
 st.set_page_config(page_title="Bike Demand Prediction", layout="wide")
 st.title("🚲 Bike Sharing Demand Prediction System")
@@ -13,20 +12,22 @@ st.title("🚲 Bike Sharing Demand Prediction System")
 # =============================
 df = pd.read_csv("Dataset.csv")
 
-# =============================
-# Convert normalized values to real units
-# =============================
-if "temp" in df.columns:
-    df["temp"] = pd.to_numeric(df["temp"], errors="coerce") * 41
-
-if "atemp" in df.columns:
-    df["atemp"] = pd.to_numeric(df["atemp"], errors="coerce") * 50
-
-if "windspeed" in df.columns:
-    df["windspeed"] = pd.to_numeric(df["windspeed"], errors="coerce") * 67
+st.write("Dataset columns:", df.columns.tolist())
 
 # =============================
-# Mapping dictionaries
+# Convert normalized values to real units (ONLY if needed)
+# =============================
+if df["temp"].max() <= 1:
+    df["temp"] = df["temp"] * 41
+
+if df["atemp"].max() <= 1:
+    df["atemp"] = df["atemp"] * 50
+
+if df["windspeed"].max() <= 1:
+    df["windspeed"] = df["windspeed"] * 67
+
+# =============================
+# Create DISPLAY columns (DO NOT affect model)
 # =============================
 month_map = {
     1: "January", 2: "February", 3: "March", 4: "April",
@@ -51,23 +52,12 @@ weekday_map = {
     6: "Saturday"
 }
 
-# =============================
-# Apply mappings safely
-# =============================
-if "mnth" in df.columns:
-    df["mnth"] = pd.to_numeric(df["mnth"], errors="coerce")
-    df["mnth"] = df["mnth"].map(month_map)
-
-if "season" in df.columns:
-    df["season"] = pd.to_numeric(df["season"], errors="coerce")
-    df["season"] = df["season"].map(season_map)
-
-if "weekday" in df.columns:
-    df["weekday"] = pd.to_numeric(df["weekday"], errors="coerce")
-    df["weekday"] = df["weekday"].map(weekday_map)
+df["month_name"] = df["mnth"].map(month_map)
+df["season_name"] = df["season"].map(season_map)
+df["weekday_name"] = df["weekday"].map(weekday_map)
 
 # =============================
-# Feature selection
+# Feature selection (NUMERIC ONLY)
 # =============================
 target = "cnt"
 
@@ -77,41 +67,16 @@ features = [
     "temp", "atemp", "hum", "windspeed"
 ]
 
-features = [f for f in features if f in df.columns]
-df = df[features + [target]]
-
-# =============================
-# Drop NaNs ONLY for required columns
-# =============================
-df = df.dropna(subset=features + [target])
-
-# =============================
-# Safety check (VERY IMPORTANT)
-# =============================
-if df.shape[0] < 20:
-    st.error("❌ Not enough valid rows after cleaning. Please check Dataset.csv format.")
-    st.write("Rows left:", df.shape[0])
-    st.stop()
-
-# =============================
-# Encode categorical columns
-# =============================
-categorical_cols = ["season", "mnth", "weekday", "holiday", "workingday", "weathersit"]
-label_encoders = {}
-
-for col in categorical_cols:
-    if col in df.columns:
-        le = LabelEncoder()
-        df[col] = le.fit_transform(df[col].astype(str))
-        label_encoders[col] = le
-
-# =============================
-# Ensure numeric
-# =============================
-for col in df.columns:
-    df[col] = pd.to_numeric(df[col], errors="coerce")
+df = df[features + [target, "month_name", "season_name", "weekday_name"]]
 
 df = df.dropna()
+
+# =============================
+# Safety check
+# =============================
+if df.shape[0] < 50:
+    st.error("❌ Dataset too small after cleaning. Check Dataset.csv format.")
+    st.stop()
 
 X = df[features]
 y = df[target]
@@ -130,46 +95,33 @@ model.fit(X_train, y_train)
 # USER INPUTS
 # =============================
 st.subheader("🔧 Input Conditions")
-input_data = {}
 
 month_order = list(month_map.values())
 season_order = list(season_map.values())
 weekday_order = list(weekday_map.values())
 
-for col in features:
+input_data = {}
 
-    label = col
-    if col == "temp":
-        label = "Temperature (°C)"
-    elif col == "atemp":
-        label = "Feels Like Temperature (°C)"
-    elif col == "windspeed":
-        label = "Windspeed (km/h)"
-    elif col == "hum":
-        label = "Humidity (%)"
+input_data["season"] = season_map.keys().__iter__().__next__()
 
-    if col in label_encoders:
-        le = label_encoders[col]
+season_selected = st.selectbox("Season", season_order)
+input_data["season"] = list(season_map.keys())[season_order.index(season_selected)]
 
-        if col == "mnth":
-            options = [m for m in month_order if m in le.classes_]
-        elif col == "season":
-            options = [s for s in season_order if s in le.classes_]
-        elif col == "weekday":
-            options = [d for d in weekday_order if d in le.classes_]
-        else:
-            options = list(le.classes_)
+month_selected = st.selectbox("Month", month_order)
+input_data["mnth"] = list(month_map.keys())[month_order.index(month_selected)]
 
-        selected = st.selectbox(label, options)
-        input_data[col] = le.transform([selected])[0]
+weekday_selected = st.selectbox("Weekday", weekday_order)
+input_data["weekday"] = list(weekday_map.keys())[weekday_order.index(weekday_selected)]
 
-    else:
-        input_data[col] = st.slider(
-            label,
-            float(X[col].min()),
-            float(X[col].max()),
-            float(X[col].mean())
-        )
+input_data["yr"] = st.selectbox("Year (0=2011, 1=2012)", [0, 1])
+input_data["holiday"] = st.selectbox("Holiday (0=No,1=Yes)", [0, 1])
+input_data["workingday"] = st.selectbox("Working Day (0=No,1=Yes)", [0, 1])
+input_data["weathersit"] = st.selectbox("Weather Situation (1-4)", [1, 2, 3, 4])
+input_data["hr"] = st.slider("Hour", 0, 23, 12)
+input_data["temp"] = st.slider("Temperature (°C)", 0.0, 50.0, 25.0)
+input_data["atemp"] = st.slider("Feels Like Temp (°C)", 0.0, 50.0, 25.0)
+input_data["hum"] = st.slider("Humidity", 0.0, 1.0, 0.5)
+input_data["windspeed"] = st.slider("Windspeed (km/h)", 0.0, 70.0, 10.0)
 
 input_df = pd.DataFrame([input_data])
 
@@ -181,20 +133,31 @@ if st.button("🚀 Predict Bike Demand"):
     st.success(f"🚴 Predicted Bike Demand: **{int(prediction[0])} bikes**")
 
 # =============================
-# GRAPHS (Matplotlib)
+# GRAPHS
 # =============================
 st.subheader("📊 Data Visualizations")
 
 fig1, ax1 = plt.subplots()
-df.groupby("mnth")["cnt"].mean().reindex(month_order).plot(kind="bar", ax=ax1)
+df.groupby("month_name")["cnt"].mean().reindex(month_order).plot(kind="bar", ax=ax1)
 ax1.set_title("Average Bike Demand per Month")
-ax1.set_xlabel("Month")
-ax1.set_ylabel("Bike Demand")
 st.pyplot(fig1)
 
-f
+fig2, ax2 = plt.subplots()
+df.groupby("weekday_name")["cnt"].mean().reindex(weekday_order).plot(kind="bar", ax=ax2)
+ax2.set_title("Average Bike Demand per Weekday")
+st.pyplot(fig2)
+
+fig3, ax3 = plt.subplots()
+ax3.scatter(df["temp"], df["cnt"])
+ax3.set_title("Temperature vs Bike Demand")
+ax3.set_xlabel("Temperature (°C)")
+ax3.set_ylabel("Bike Demand")
+st.pyplot(fig3)
+
+st.caption("Bike Demand Prediction System | Streamlit + Random Forest")
 
 
 st.markdown("---")
 st.caption("Bike Demand Prediction System | Streamlit + Random Forest")
+
 
