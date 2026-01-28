@@ -27,7 +27,7 @@ df.replace("?", pd.NA, inplace=True)
 # =============================
 # Convert numeric columns safely
 # =============================
-numeric_cols = ["temp", "atemp", "hum", "windspeed", "cnt", "hr", "mnth", "yr"]
+numeric_cols = ["temp", "atemp", "hum", "windspeed", "cnt", "hr", "mnth", "yr", "weekday"]
 for col in numeric_cols:
     if col in df.columns:
         df[col] = pd.to_numeric(df[col], errors="coerce")
@@ -48,7 +48,7 @@ safe_scale("windspeed", 67)
 # =============================
 # Encode categorical columns
 # =============================
-categorical_cols = ["season", "holiday", "workingday", "weathersit"]
+categorical_cols = ["season", "holiday", "workingday", "weathersit", "weekday"]
 label_encoders = {}
 
 for col in categorical_cols:
@@ -63,7 +63,7 @@ for col in categorical_cols:
 features = [
     "season", "yr", "mnth", "hr",
     "holiday", "workingday", "weathersit",
-    "temp", "atemp", "hum", "windspeed"
+    "weekday", "temp", "atemp", "hum", "windspeed"
 ]
 target = "cnt"
 
@@ -101,14 +101,38 @@ symbol_map = {
     "windspeed": "🌬️ Windspeed (km/h)"
 }
 
+month_names = [
+    "January","February","March","April","May","June",
+    "July","August","September","October","November","December"
+]
+weekday_names = [
+    "Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"
+]
+
 for col in features:
-    if col in categorical_cols:
+    if col in categorical_cols and col != "weekday":
         le = label_encoders[col]
-        # remove <NA> or None values from dropdown
         options = [cls for cls in le.classes_ if pd.notna(cls) and str(cls).lower() != "<na>"]
         selected = st.selectbox(col.capitalize(), options)
         input_data[col] = le.transform([selected])[0]
+
+    elif col == "yr":
+        # Checkbox for year
+        year_selected = st.checkbox("Year 2012 (checked) / 2011 (unchecked)", value=True)
+        input_data[col] = 1 if year_selected else 0
+
+    elif col == "mnth":
+        # Dropdown for month names
+        selected_month = st.selectbox("📅 Month", month_names)
+        input_data[col] = month_names.index(selected_month) + 1
+
+    elif col == "weekday":
+        # Dropdown for weekdays
+        selected_day = st.selectbox("🗓️ Weekday", weekday_names)
+        input_data[col] = weekday_names.index(selected_day)
+
     else:
+        # Sliders for numeric features
         min_val = float(X[col].min())
         max_val = float(X[col].max())
         mean_val = float(X[col].mean())
@@ -140,10 +164,15 @@ ax2.set_title("Average Demand per Hour")
 st.pyplot(fig2)
 
 fig3, ax3 = plt.subplots()
-ax3.scatter(df["temp"], df["cnt"])
-ax3.set_xlabel("Temperature")
-ax3.set_ylabel("Bike Demand")
-ax3.set_title("Temperature vs Bike Demand")
+df.groupby("weekday")["cnt"].mean().plot(kind="bar", ax=ax3)
+ax3.set_title("Average Demand per Weekday")
 st.pyplot(fig3)
+
+fig4, ax4 = plt.subplots()
+ax4.scatter(df["temp"], df["cnt"])
+ax4.set_xlabel("Temperature")
+ax4.set_ylabel("Bike Demand")
+ax4.set_title("Temperature vs Bike Demand")
+st.pyplot(fig4)
 
 st.caption("Bike Sharing Demand Prediction System | Random Forest + Streamlit")
