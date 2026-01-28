@@ -15,12 +15,11 @@ df = pd.read_csv("Dataset.csv")
 # =========================
 # Force numeric for numeric columns
 # =========================
-num_cols = ["temp", "atemp", "hum", "windspeed", "cnt"]
-for col in num_cols:
+for col in ["temp", "atemp", "hum", "windspeed", "cnt"]:
     df[col] = pd.to_numeric(df[col], errors="coerce")
 
 # =========================
-# Maps
+# Column mappings
 # =========================
 season_map = {1: "Spring", 2: "Summer", 3: "Fall", 4: "Winter"}
 month_map = {
@@ -35,7 +34,7 @@ weekday_map = {
 }
 
 # =========================
-# Convert season/month/weekday ONLY if numeric
+# Convert categorical ONLY if numeric
 # =========================
 if pd.api.types.is_numeric_dtype(df["season"]):
     df["season"] = df["season"].map(season_map)
@@ -67,8 +66,14 @@ if df["hum"].max(skipna=True) <= 1:
 features = ["season", "mnth", "weekday", "temp", "atemp", "hum", "windspeed"]
 target = "cnt"
 
-df = df[features + [target]]
-df = df.dropna()
+df = df[features + [target]].dropna()
+
+# =========================
+# Safety Check
+# =========================
+if df.shape[0] < 20:
+    st.error("❌ Dataset too small after cleaning. Check Dataset.csv format.")
+    st.stop()
 
 # =========================
 # Encode categories
@@ -79,7 +84,7 @@ X = df_encoded.drop(target, axis=1)
 y = df_encoded[target]
 
 # =========================
-# Train model
+# Train Model
 # =========================
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42
@@ -94,15 +99,18 @@ model.fit(X_train, y_train)
 st.sidebar.header("Input Conditions")
 
 season_input = st.sidebar.selectbox(
-    "Season", sorted(df["season"].dropna().unique())
+    "Season",
+    sorted(df["season"].dropna().unique())
 )
 
 month_input = st.sidebar.selectbox(
-    "Month", list(df["mnth"].dropna().unique())
+    "Month",
+    sorted(df["mnth"].dropna().unique(), key=list(month_map.values()).index)
 )
 
 weekday_input = st.sidebar.selectbox(
-    "Weekday", list(df["weekday"].dropna().unique())
+    "Weekday",
+    sorted(df["weekday"].dropna().unique(), key=list(weekday_map.values()).index)
 )
 
 temp_input = st.sidebar.slider("Temperature (°C)", 0.0, 50.0, float(df["temp"].mean()))
@@ -111,7 +119,7 @@ hum_input = st.sidebar.slider("Humidity (%)", 0.0, 100.0, float(df["hum"].mean()
 wind_input = st.sidebar.slider("Windspeed (km/h)", 0.0, 70.0, float(df["windspeed"].mean()))
 
 # =========================
-# Build input row
+# Create input dataframe
 # =========================
 input_dict = {
     "temp": temp_input,
@@ -138,7 +146,7 @@ if st.button("🚲 Predict Bike Demand"):
     st.success(f"Estimated Bike Demand: **{int(prediction)} bikes**")
 
 # =========================
-# Graph
+# Interactive Graph
 # =========================
 st.subheader("📊 Demand vs Temperature")
 
