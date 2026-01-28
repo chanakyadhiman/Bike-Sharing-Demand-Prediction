@@ -13,7 +13,8 @@ st.title("🚲 Bike Sharing Demand Prediction System")
 # =============================
 try:
     df = pd.read_csv("Dataset.csv")
-    
+    st.write("📄 Raw Dataset Preview")
+    st.dataframe(df.head())
 except Exception as e:
     st.error(f"❌ Failed to load dataset: {e}")
     st.stop()
@@ -94,8 +95,8 @@ st.subheader("🔧 Enter Input Conditions")
 input_data = {}
 
 symbol_map = {
-    "temp": "🌡️ Temp (Temperature) (°C)",
-    "atemp": "🤖 Atemp (Feels Like) (°C)",
+    "temp": "🌡️ Temp (°C)",
+    "atemp": "🤖 Atemp (°C)",
     "hum": "💧 Humidity (%)",
     "windspeed": "🌬️ Windspeed (km/h)"
 }
@@ -116,16 +117,9 @@ for col in features:
         input_data[col] = le.transform([selected])[0]
 
     elif col == "yr":
-        year_2011 = st.checkbox("Year 2011")
-        year_2012 = st.checkbox("Year 2012")
-        if year_2011 and not year_2012:
-            input_data[col] = 0
-        elif year_2012 and not year_2011:
-            input_data[col] = 1
-        elif year_2011 and year_2012:
-            input_data[col] = 1  # default to 2012 if both checked
-        else:
-            input_data[col] = 0  # default to 2011 if none checked
+        # Radio button for year selection (correct encoding)
+        year_selected = st.radio("Select Year", ["2011", "2012"])
+        input_data[col] = 0 if year_selected == "2011" else 1
 
     elif col == "mnth":
         selected_month = st.selectbox("📅 Month", month_names)
@@ -186,6 +180,5 @@ fig4 = px.scatter(df, x="temp", y="cnt",
                   opacity=0.6)
 st.plotly_chart(fig4, use_container_width=True)
 
+
 st.caption("Project - Bike Sharing Demand Prediction System | Group-1: Chanakya, Krishna et al. | Random Forest + Streamlit + Plotly")
-
-
