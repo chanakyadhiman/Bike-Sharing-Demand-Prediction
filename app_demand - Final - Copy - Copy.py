@@ -117,7 +117,7 @@ for col in features:
         input_data[col] = le.transform([selected])[0]
 
     elif col == "yr":
-        # Radio button for year selection (correct encoding)
+        # Radio button ensures correct year encoding
         year_selected = st.radio("Select Year", ["2011", "2012"])
         input_data[col] = 0 if year_selected == "2011" else 1
 
@@ -136,7 +136,8 @@ for col in features:
         label = symbol_map.get(col, col.capitalize())
         input_data[col] = st.slider(label, min_val, max_val, mean_val)
 
-input_df = pd.DataFrame([input_data])
+# Ensure input_df matches training features exactly
+input_df = pd.DataFrame([input_data], columns=features)
 
 # =============================
 # Prediction
@@ -180,5 +181,4 @@ fig4 = px.scatter(df, x="temp", y="cnt",
                   opacity=0.6)
 st.plotly_chart(fig4, use_container_width=True)
 
-
-st.caption("Project - Bike Sharing Demand Prediction System | Group-1: Chanakya, Krishna et al. | Random Forest + Streamlit + Plotly")
+st.caption("Project - Bike Sharing Demand Prediction System | Group-1: Chanakya, Krishna et al. | Random Forest Model + Streamlit + Plotly")
