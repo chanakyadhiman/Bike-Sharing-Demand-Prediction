@@ -12,22 +12,27 @@ st.title("🚲 Bike Sharing Demand Prediction System")
 # =============================
 df = pd.read_csv("Dataset.csv")
 
-st.write("Dataset columns:", df.columns.tolist())
+# =============================
+# Force numeric for key columns FIRST
+# =============================
+for col in ["temp", "atemp", "windspeed", "hum"]:
+    if col in df.columns:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
 
 # =============================
-# Convert normalized values to real units (ONLY if needed)
+# Convert normalized values to real units (only if needed)
 # =============================
-if df["temp"].max() <= 1:
+if "temp" in df.columns and df["temp"].max() <= 1:
     df["temp"] = df["temp"] * 41
 
-if df["atemp"].max() <= 1:
+if "atemp" in df.columns and df["atemp"].max() <= 1:
     df["atemp"] = df["atemp"] * 50
 
-if df["windspeed"].max() <= 1:
+if "windspeed" in df.columns and df["windspeed"].max() <= 1:
     df["windspeed"] = df["windspeed"] * 67
 
 # =============================
-# Create DISPLAY columns (DO NOT affect model)
+# Mapping dictionaries
 # =============================
 month_map = {
     1: "January", 2: "February", 3: "March", 4: "April",
@@ -52,12 +57,15 @@ weekday_map = {
     6: "Saturday"
 }
 
+# =============================
+# Create DISPLAY columns (do not affect model)
+# =============================
 df["month_name"] = df["mnth"].map(month_map)
 df["season_name"] = df["season"].map(season_map)
 df["weekday_name"] = df["weekday"].map(weekday_map)
 
 # =============================
-# Feature selection (NUMERIC ONLY)
+# Feature selection (numeric for model)
 # =============================
 target = "cnt"
 
@@ -100,30 +108,39 @@ month_order = list(month_map.values())
 season_order = list(season_map.values())
 weekday_order = list(weekday_map.values())
 
-input_data = {}
-
-input_data["season"] = season_map.keys().__iter__().__next__()
-
 season_selected = st.selectbox("Season", season_order)
-input_data["season"] = list(season_map.keys())[season_order.index(season_selected)]
+season_val = list(season_map.keys())[season_order.index(season_selected)]
 
 month_selected = st.selectbox("Month", month_order)
-input_data["mnth"] = list(month_map.keys())[month_order.index(month_selected)]
+month_val = list(month_map.keys())[month_order.index(month_selected)]
 
 weekday_selected = st.selectbox("Weekday", weekday_order)
-input_data["weekday"] = list(weekday_map.keys())[weekday_order.index(weekday_selected)]
+weekday_val = list(weekday_map.keys())[weekday_order.index(weekday_selected)]
 
-input_data["yr"] = st.selectbox("Year (0=2011, 1=2012)", [0, 1])
-input_data["holiday"] = st.selectbox("Holiday (0=No,1=Yes)", [0, 1])
-input_data["workingday"] = st.selectbox("Working Day (0=No,1=Yes)", [0, 1])
-input_data["weathersit"] = st.selectbox("Weather Situation (1-4)", [1, 2, 3, 4])
-input_data["hr"] = st.slider("Hour", 0, 23, 12)
-input_data["temp"] = st.slider("Temperature (°C)", 0.0, 50.0, 25.0)
-input_data["atemp"] = st.slider("Feels Like Temp (°C)", 0.0, 50.0, 25.0)
-input_data["hum"] = st.slider("Humidity", 0.0, 1.0, 0.5)
-input_data["windspeed"] = st.slider("Windspeed (km/h)", 0.0, 70.0, 10.0)
+yr_val = st.selectbox("Year (0 = 2011, 1 = 2012)", [0, 1])
+holiday_val = st.selectbox("Holiday (0 = No, 1 = Yes)", [0, 1])
+workingday_val = st.selectbox("Working Day (0 = No, 1 = Yes)", [0, 1])
+weathersit_val = st.selectbox("Weather Situation (1–4)", [1, 2, 3, 4])
+hr_val = st.slider("Hour", 0, 23, 12)
+temp_val = st.slider("Temperature (°C)", 0.0, 50.0, 25.0)
+atemp_val = st.slider("Feels Like Temperature (°C)", 0.0, 50.0, 25.0)
+hum_val = st.slider("Humidity", 0.0, 1.0, 0.5)
+windspeed_val = st.slider("Windspeed (km/h)", 0.0, 70.0, 10.0)
 
-input_df = pd.DataFrame([input_data])
+input_df = pd.DataFrame([{
+    "season": season_val,
+    "yr": yr_val,
+    "mnth": month_val,
+    "weekday": weekday_val,
+    "hr": hr_val,
+    "holiday": holiday_val,
+    "workingday": workingday_val,
+    "weathersit": weathersit_val,
+    "temp": temp_val,
+    "atemp": atemp_val,
+    "hum": hum_val,
+    "windspeed": windspeed_val
+}])
 
 # =============================
 # Prediction
@@ -159,5 +176,6 @@ st.caption("Bike Demand Prediction System | Streamlit + Random Forest")
 
 st.markdown("---")
 st.caption("Bike Demand Prediction System | Streamlit + Random Forest")
+
 
 
