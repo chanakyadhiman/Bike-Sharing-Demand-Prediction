@@ -13,13 +13,7 @@ st.title("🚴 Bike Sharing Demand Prediction System")
 df = pd.read_csv("Dataset.csv")
 
 # =========================
-# Force numeric for numeric columns
-# =========================
-for col in ["temp", "atemp", "hum", "windspeed", "cnt"]:
-    df[col] = pd.to_numeric(df[col], errors="coerce")
-
-# =========================
-# Column mappings
+# Maps
 # =========================
 season_map = {1: "Spring", 2: "Summer", 3: "Fall", 4: "Winter"}
 month_map = {
@@ -34,51 +28,47 @@ weekday_map = {
 }
 
 # =========================
-# Convert categorical ONLY if numeric
+# Convert categorical columns safely
 # =========================
-if pd.api.types.is_numeric_dtype(df["season"]):
-    df["season"] = df["season"].map(season_map)
-
-if pd.api.types.is_numeric_dtype(df["mnth"]):
-    df["mnth"] = df["mnth"].map(month_map)
-
-if pd.api.types.is_numeric_dtype(df["weekday"]):
-    df["weekday"] = df["weekday"].map(weekday_map)
+df["season"] = df["season"].map(season_map)
+df["mnth"] = df["mnth"].map(month_map)
+df["weekday"] = df["weekday"].map(weekday_map)
 
 # =========================
-# Convert units safely
+# Convert normalized values
 # =========================
-if df["temp"].max(skipna=True) <= 1:
+if df["temp"].max() <= 1:
     df["temp"] = df["temp"] * 41
 
-if df["atemp"].max(skipna=True) <= 1:
+if df["atemp"].max() <= 1:
     df["atemp"] = df["atemp"] * 50
 
-if df["windspeed"].max(skipna=True) <= 1:
+if df["windspeed"].max() <= 1:
     df["windspeed"] = df["windspeed"] * 67
 
-if df["hum"].max(skipna=True) <= 1:
+if df["hum"].max() <= 1:
     df["hum"] = df["hum"] * 100
 
 # =========================
-# Select columns
+# Select needed columns
 # =========================
 features = ["season", "mnth", "weekday", "temp", "atemp", "hum", "windspeed"]
 target = "cnt"
 
-df = df[features + [target]].dropna()
+df = df[features + [target]]
+df = df.dropna()
 
 # =========================
 # Safety Check
 # =========================
-if df.shape[0] < 20:
-    st.error("❌ Dataset too small after cleaning. Check Dataset.csv format.")
+if df.shape[0] < 10:
+    st.error("❌ Dataset too small or invalid after cleaning. Check Dataset.csv.")
     st.stop()
 
 # =========================
-# Encode categories
+# Encode categorical columns
 # =========================
-df_encoded = pd.get_dummies(df, columns=["season", "mnth", "weekday"], drop_first=True)
+df_encoded = pd.get_dummies(df, columns=["season", "mnth", "weekday"])
 
 X = df_encoded.drop(target, axis=1)
 y = df_encoded[target]
@@ -94,29 +84,24 @@ model = RandomForestRegressor(random_state=42)
 model.fit(X_train, y_train)
 
 # =========================
-# Sidebar Inputs
+# USER INPUT (MAIN PAGE — NO SIDEBAR)
 # =========================
-st.sidebar.header("Input Conditions")
+st.subheader("🔧 Enter Weather & Date Conditions")
 
-season_input = st.sidebar.selectbox(
-    "Season",
-    sorted(df["season"].dropna().unique())
-)
+col1, col2, col3 = st.columns(3)
 
-month_input = st.sidebar.selectbox(
-    "Month",
-    sorted(df["mnth"].dropna().unique(), key=list(month_map.values()).index)
-)
+with col1:
+    season_input = st.selectbox("Season", sorted(df["season"].unique()))
+    month_input = st.selectbox("Month", sorted(df["mnth"].unique()))
+    weekday_input = st.selectbox("Weekday", sorted(df["weekday"].unique()))
 
-weekday_input = st.sidebar.selectbox(
-    "Weekday",
-    sorted(df["weekday"].dropna().unique(), key=list(weekday_map.values()).index)
-)
+with col2:
+    temp_input = st.slider("Temperature (°C)", 0.0, 50.0, float(df["temp"].mean()))
+    atemp_input = st.slider("Feels Like (°C)", 0.0, 50.0, float(df["atemp"].mean()))
 
-temp_input = st.sidebar.slider("Temperature (°C)", 0.0, 50.0, float(df["temp"].mean()))
-atemp_input = st.sidebar.slider("Feels Like (°C)", 0.0, 50.0, float(df["atemp"].mean()))
-hum_input = st.sidebar.slider("Humidity (%)", 0.0, 100.0, float(df["hum"].mean()))
-wind_input = st.sidebar.slider("Windspeed (km/h)", 0.0, 70.0, float(df["windspeed"].mean()))
+with col3:
+    hum_input = st.slider("Humidity (%)", 0.0, 100.0, float(df["hum"].mean()))
+    wind_input = st.slider("Windspeed (km/h)", 0.0, 70.0, float(df["windspeed"].mean()))
 
 # =========================
 # Create input dataframe
@@ -137,6 +122,7 @@ for col in X.columns:
         input_dict[col] = 1 if col == f"weekday_{weekday_input}" else 0
 
 input_df = pd.DataFrame([input_dict])
+input_df = input_df.reindex(columns=X.columns, fill_value=0)
 
 # =========================
 # Prediction
@@ -146,12 +132,21 @@ if st.button("🚲 Predict Bike Demand"):
     st.success(f"Estimated Bike Demand: **{int(prediction)} bikes**")
 
 # =========================
-# Interactive Graph
+# INTERACTIVE GRAPH
 # =========================
-st.subheader("📊 Demand vs Temperature")
+st.subheader("📊 Interactive Demand vs Temperature")
+
+temp_filter = st.slider(
+    "Filter Temperature up to (°C)",
+    float(df["temp"].min()),
+    float(df["temp"].max()),
+    float(df["temp"].max())
+)
+
+filtered_df = df[df["temp"] <= temp_filter]
 
 fig, ax = plt.subplots()
-ax.scatter(df["temp"], df["cnt"])
+ax.scatter(filtered_df["temp"], filtered_df["cnt"])
 ax.set_xlabel("Temperature (°C)")
 ax.set_ylabel("Bike Demand")
 ax.set_title("Bike Demand vs Temperature")
