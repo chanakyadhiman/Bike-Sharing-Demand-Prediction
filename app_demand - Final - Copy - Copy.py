@@ -14,7 +14,7 @@ st.title("🚲 Bike Sharing Demand Prediction System")
 try:
     df = pd.read_csv("Dataset.csv")
     st.write("📄 Raw Dataset Preview")
-    st.dataframe(df.head())
+    
 except Exception as e:
     st.error(f"❌ Failed to load dataset: {e}")
     st.stop()
@@ -95,8 +95,8 @@ st.subheader("🔧 Enter Input Conditions")
 input_data = {}
 
 symbol_map = {
-    "temp": "🌡️ Temp (°C)",
-    "atemp": "🤖 Atemp (°C)",
+    "temp": "🌡️ Temp (Temperature) (°C)",
+    "atemp": "🤖 Atemp (Feels Like) (°C)",
     "hum": "💧 Humidity (%)",
     "windspeed": "🌬️ Windspeed (km/h)"
 }
@@ -188,3 +188,4 @@ fig4 = px.scatter(df, x="temp", y="cnt",
 st.plotly_chart(fig4, use_container_width=True)
 
 st.caption("Project - Bike Sharing Demand Prediction System | Group-1: Chanakya, Krishna et al. | Random Forest + Streamlit + Plotly")
+
