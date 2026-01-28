@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.express as px
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
@@ -117,22 +117,26 @@ for col in features:
         input_data[col] = le.transform([selected])[0]
 
     elif col == "yr":
-        # Checkbox for year
-        year_selected = st.checkbox("Year 2012 (checked) / 2011 (unchecked)", value=True)
-        input_data[col] = 1 if year_selected else 0
+        year_2011 = st.checkbox("Year 2011")
+        year_2012 = st.checkbox("Year 2012")
+        if year_2011 and not year_2012:
+            input_data[col] = 0
+        elif year_2012 and not year_2011:
+            input_data[col] = 1
+        elif year_2011 and year_2012:
+            input_data[col] = 1  # default to 2012 if both checked
+        else:
+            input_data[col] = 0  # default to 2011 if none checked
 
     elif col == "mnth":
-        # Dropdown for month names
         selected_month = st.selectbox("📅 Month", month_names)
         input_data[col] = month_names.index(selected_month) + 1
 
     elif col == "weekday":
-        # Dropdown for weekdays
         selected_day = st.selectbox("🗓️ Weekday", weekday_names)
         input_data[col] = weekday_names.index(selected_day)
 
     else:
-        # Sliders for numeric features
         min_val = float(X[col].min())
         max_val = float(X[col].max())
         mean_val = float(X[col].mean())
@@ -149,30 +153,38 @@ if st.button("🚀 Predict Bike Demand"):
     st.success(f"🚴 Predicted Bike Demand: **{int(prediction[0])} bikes**")
 
 # =============================
-# Graphs
+# Interactive Graphs with Plotly
 # =============================
-st.subheader("📊 Visualizations")
+st.subheader("📊 Interactive Visualizations")
 
-fig1, ax1 = plt.subplots()
-df.groupby("mnth")["cnt"].mean().plot(kind="bar", ax=ax1)
-ax1.set_title("Average Demand per Month")
-st.pyplot(fig1)
+# Average demand per month
+fig1 = px.bar(df.groupby("mnth")["cnt"].mean().reset_index(),
+              x="mnth", y="cnt",
+              labels={"mnth": "Month", "cnt": "Average Demand"},
+              title="Average Demand per Month")
+fig1.update_xaxes(tickmode="array", tickvals=list(range(1,13)), ticktext=month_names)
+st.plotly_chart(fig1, use_container_width=True)
 
-fig2, ax2 = plt.subplots()
-df.groupby("hr")["cnt"].mean().plot(kind="line", ax=ax2)
-ax2.set_title("Average Demand per Hour")
-st.pyplot(fig2)
+# Average demand per hour
+fig2 = px.line(df.groupby("hr")["cnt"].mean().reset_index(),
+               x="hr", y="cnt",
+               labels={"hr": "Hour", "cnt": "Average Demand"},
+               title="Average Demand per Hour")
+st.plotly_chart(fig2, use_container_width=True)
 
-fig3, ax3 = plt.subplots()
-df.groupby("weekday")["cnt"].mean().plot(kind="bar", ax=ax3)
-ax3.set_title("Average Demand per Weekday")
-st.pyplot(fig3)
+# Average demand per weekday
+fig3 = px.bar(df.groupby("weekday")["cnt"].mean().reset_index(),
+              x="weekday", y="cnt",
+              labels={"weekday": "Weekday", "cnt": "Average Demand"},
+              title="Average Demand per Weekday")
+fig3.update_xaxes(tickmode="array", tickvals=list(range(7)), ticktext=weekday_names)
+st.plotly_chart(fig3, use_container_width=True)
 
-fig4, ax4 = plt.subplots()
-ax4.scatter(df["temp"], df["cnt"])
-ax4.set_xlabel("Temperature")
-ax4.set_ylabel("Bike Demand")
-ax4.set_title("Temperature vs Bike Demand")
-st.pyplot(fig4)
+# Temperature vs Demand
+fig4 = px.scatter(df, x="temp", y="cnt",
+                  labels={"temp": "Temperature (°C)", "cnt": "Bike Demand"},
+                  title="Temperature vs Bike Demand",
+                  opacity=0.6)
+st.plotly_chart(fig4, use_container_width=True)
 
-st.caption("Bike Sharing Demand Prediction System | Random Forest + Streamlit")
+st.caption("Project - Bike Sharing Demand Prediction System | Group-1: Chanakya, Krishna et al. | Random Forest + Streamlit + Plotly")
