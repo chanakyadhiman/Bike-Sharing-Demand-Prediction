@@ -104,7 +104,8 @@ symbol_map = {
 for col in features:
     if col in categorical_cols:
         le = label_encoders[col]
-        options = [cls for cls in le.classes_ if pd.notna(cls)]
+        # remove <NA> or None values from dropdown
+        options = [cls for cls in le.classes_ if pd.notna(cls) and str(cls).lower() != "<na>"]
         selected = st.selectbox(col.capitalize(), options)
         input_data[col] = le.transform([selected])[0]
     else:
@@ -145,4 +146,4 @@ ax3.set_ylabel("Bike Demand")
 ax3.set_title("Temperature vs Bike Demand")
 st.pyplot(fig3)
 
-st.caption("Project - Bike Sharing Demand Prediction System | Group-1: Chanakya, Krishna et al. | Random Forest + Streamlit")
+st.caption("Bike Sharing Demand Prediction System | Random Forest + Streamlit")
