@@ -13,9 +13,9 @@ st.title("🚴 Bike Sharing Demand Prediction System")
 df = pd.read_csv("Dataset.csv")
 
 # =========================
-# Force numeric columns
+# Force numeric for numeric columns
 # =========================
-num_cols = ["temp", "atemp", "hum", "windspeed", "cnt", "season", "mnth", "weekday"]
+num_cols = ["temp", "atemp", "hum", "windspeed", "cnt"]
 for col in num_cols:
     df[col] = pd.to_numeric(df[col], errors="coerce")
 
@@ -35,6 +35,18 @@ weekday_map = {
 }
 
 # =========================
+# Convert season/month/weekday ONLY if numeric
+# =========================
+if pd.api.types.is_numeric_dtype(df["season"]):
+    df["season"] = df["season"].map(season_map)
+
+if pd.api.types.is_numeric_dtype(df["mnth"]):
+    df["mnth"] = df["mnth"].map(month_map)
+
+if pd.api.types.is_numeric_dtype(df["weekday"]):
+    df["weekday"] = df["weekday"].map(weekday_map)
+
+# =========================
 # Convert units safely
 # =========================
 if df["temp"].max(skipna=True) <= 1:
@@ -50,29 +62,16 @@ if df["hum"].max(skipna=True) <= 1:
     df["hum"] = df["hum"] * 100
 
 # =========================
-# Convert categorical
-# =========================
-df["season"] = df["season"].map(season_map)
-df["mnth"] = df["mnth"].map(month_map)
-df["weekday"] = df["weekday"].map(weekday_map)
-
-# =========================
 # Select columns
 # =========================
 features = ["season", "mnth", "weekday", "temp", "atemp", "hum", "windspeed"]
 target = "cnt"
 
-df = df[features + [target]].dropna()
+df = df[features + [target]]
+df = df.dropna()
 
 # =========================
-# Safety check
-# =========================
-if df.shape[0] < 20:
-    st.error("❌ Dataset too small after cleaning. Check Dataset.csv format.")
-    st.stop()
-
-# =========================
-# Encode
+# Encode categories
 # =========================
 df_encoded = pd.get_dummies(df, columns=["season", "mnth", "weekday"], drop_first=True)
 
@@ -90,13 +89,21 @@ model = RandomForestRegressor(random_state=42)
 model.fit(X_train, y_train)
 
 # =========================
-# Sidebar inputs
+# Sidebar Inputs
 # =========================
 st.sidebar.header("Input Conditions")
 
-season_input = st.sidebar.selectbox("Season", sorted(df["season"].dropna().unique()))
-month_input = st.sidebar.selectbox("Month", list(month_map.values()))
-weekday_input = st.sidebar.selectbox("Weekday", list(weekday_map.values()))
+season_input = st.sidebar.selectbox(
+    "Season", sorted(df["season"].dropna().unique())
+)
+
+month_input = st.sidebar.selectbox(
+    "Month", list(df["mnth"].dropna().unique())
+)
+
+weekday_input = st.sidebar.selectbox(
+    "Weekday", list(df["weekday"].dropna().unique())
+)
 
 temp_input = st.sidebar.slider("Temperature (°C)", 0.0, 50.0, float(df["temp"].mean()))
 atemp_input = st.sidebar.slider("Feels Like (°C)", 0.0, 50.0, float(df["atemp"].mean()))
@@ -104,7 +111,7 @@ hum_input = st.sidebar.slider("Humidity (%)", 0.0, 100.0, float(df["hum"].mean()
 wind_input = st.sidebar.slider("Windspeed (km/h)", 0.0, 70.0, float(df["windspeed"].mean()))
 
 # =========================
-# Input dataframe
+# Build input row
 # =========================
 input_dict = {
     "temp": temp_input,
