@@ -3,154 +3,148 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
 
-st.set_page_config(page_title="Bike Sharing Demand Prediction", layout="wide")
-st.title("🚲 Bike Sharing Demand Prediction System")
+st.set_page_config(page_title="Bike Demand Prediction", layout="wide")
+st.title("🚴 Bike Sharing Demand Prediction System")
 
-# =============================
-# Load dataset
-# =============================
+# =========================
+# Load Dataset
+# =========================
 df = pd.read_csv("Dataset.csv")
 
-st.write("📄 Raw Dataset Preview")
-st.dataframe(df.head())
+# =========================
+# Column mappings
+# =========================
+season_map = {1: "Spring", 2: "Summer", 3: "Fall", 4: "Winter"}
+month_map = {
+    1: "January", 2: "February", 3: "March", 4: "April",
+    5: "May", 6: "June", 7: "July", 8: "August",
+    9: "September", 10: "October", 11: "November", 12: "December"
+}
+weekday_map = {
+    0: "Sunday", 1: "Monday", 2: "Tuesday",
+    3: "Wednesday", 4: "Thursday",
+    5: "Friday", 6: "Saturday"
+}
 
-# =============================
-# Replace ? with NaN
-# =============================
-df.replace("?", pd.NA, inplace=True)
+# =========================
+# Convert columns
+# =========================
+df["season"] = df["season"].map(season_map)
+df["mnth"] = df["mnth"].map(month_map)
+df["weekday"] = df["weekday"].map(weekday_map)
 
-# =============================
-# Convert numeric columns safely
-# =============================
-numeric_cols = ["temp", "atemp", "hum", "windspeed", "cnt", "hr", "mnth", "yr"]
-
-for col in numeric_cols:
-    if col in df.columns:
-        df[col] = pd.to_numeric(df[col], errors="coerce")
-
-# =============================
-# Convert normalized values
-# =============================
-if "temp" in df.columns and df["temp"].max() <= 1:
+# Convert temp to °C if normalized
+if df["temp"].max() <= 1:
     df["temp"] = df["temp"] * 41
 
-if "atemp" in df.columns and df["atemp"].max() <= 1:
+if df["atemp"].max() <= 1:
     df["atemp"] = df["atemp"] * 50
 
-if "windspeed" in df.columns and df["windspeed"].max() <= 1:
+# Convert windspeed to km/h if normalized
+if df["windspeed"].max() <= 1:
     df["windspeed"] = df["windspeed"] * 67
 
-# =============================
-# Encode categorical columns
-# =============================
-categorical_cols = ["season", "holiday", "workingday", "weathersit"]
+# Humidity %
+if df["hum"].max() <= 1:
+    df["hum"] = df["hum"] * 100
 
-label_encoders = {}
-
-for col in categorical_cols:
-    if col in df.columns:
-        le = LabelEncoder()
-        df[col] = le.fit_transform(df[col].astype(str))
-        label_encoders[col] = le
-
-# =============================
-# Feature selection
-# =============================
-features = [
-    "season", "yr", "mnth", "hr",
-    "holiday", "workingday", "weathersit",
-    "temp", "atemp", "hum", "windspeed"
-]
-
+# =========================
+# Select columns
+# =========================
+features = ["season", "mnth", "weekday", "temp", "atemp", "hum", "windspeed"]
 target = "cnt"
 
-df = df[features + [target]]
-df = df.dropna()
+df = df[features + [target]].dropna()
 
-# =============================
-# Safety check
-# =============================
-if len(df) < 20:
+# =========================
+# Safety Check
+# =========================
+if df.shape[0] < 20:
     st.error("❌ Dataset too small after cleaning. Check Dataset.csv format.")
     st.stop()
 
-# =============================
-# Train model
-# =============================
-X = df[features]
-y = df[target]
+# =========================
+# Encode categories
+# =========================
+df_encoded = pd.get_dummies(df, columns=["season", "mnth", "weekday"], drop_first=True)
 
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42
-)
+X = df_encoded.drop(target, axis=1)
+y = df_encoded[target]
 
-model = RandomForestRegressor(n_estimators=150, random_state=42)
+# =========================
+# Train Model
+# =========================
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+model = RandomForestRegressor(random_state=42)
 model.fit(X_train, y_train)
 
-st.success("✅ Model trained successfully")
+# =========================
+# Sidebar Inputs
+# =========================
+st.sidebar.header("Input Conditions")
 
-# =============================
-# User input UI
-# =============================
-st.subheader("🔧 Enter Input Conditions")
+season_input = st.sidebar.selectbox(
+    "Season",
+    sorted(df["season"].dropna().unique())
+)
 
-input_data = {}
+month_input = st.sidebar.selectbox(
+    "Month",
+    list(month_map.values())
+)
 
-for col in features:
-    if col in categorical_cols:
-        le = label_encoders[col]
-        selected = st.selectbox(col.capitalize(), le.classes_)
-        input_data[col] = le.transform([selected])[0]
-    else:
-        min_val = float(X[col].min())
-        max_val = float(X[col].max())
-        mean_val = float(X[col].mean())
+weekday_input = st.sidebar.selectbox(
+    "Weekday",
+    list(weekday_map.values())
+)
 
-        input_data[col] = st.slider(
-            col.capitalize(),
-            min_val,
-            max_val,
-            mean_val
-        )
+temp_input = st.sidebar.slider("Temperature (°C)", 0.0, 50.0, float(df["temp"].mean()))
+atemp_input = st.sidebar.slider("Feels Like (°C)", 0.0, 50.0, float(df["atemp"].mean()))
+hum_input = st.sidebar.slider("Humidity (%)", 0.0, 100.0, float(df["hum"].mean()))
+wind_input = st.sidebar.slider("Windspeed (km/h)", 0.0, 70.0, float(df["windspeed"].mean()))
 
-input_df = pd.DataFrame([input_data])
+# =========================
+# Create input dataframe
+# =========================
+input_dict = {
+    "temp": temp_input,
+    "atemp": atemp_input,
+    "hum": hum_input,
+    "windspeed": wind_input
+}
 
-# =============================
+for col in X.columns:
+    if col.startswith("season_"):
+        input_dict[col] = 1 if col == f"season_{season_input}" else 0
+    elif col.startswith("mnth_"):
+        input_dict[col] = 1 if col == f"mnth_{month_input}" else 0
+    elif col.startswith("weekday_"):
+        input_dict[col] = 1 if col == f"weekday_{weekday_input}" else 0
+
+input_df = pd.DataFrame([input_dict])
+
+# =========================
 # Prediction
-# =============================
-if st.button("🚀 Predict Bike Demand"):
-    prediction = model.predict(input_df)
-    st.success(f"🚴 Predicted Bike Demand: **{int(prediction[0])} bikes**")
+# =========================
+if st.button("🚲 Predict Bike Demand"):
+    prediction = model.predict(input_df)[0]
+    st.success(f"Estimated Bike Demand: **{int(prediction)} bikes**")
 
-# =============================
-# Graphs
-# =============================
-st.subheader("📊 Visualizations")
+# =========================
+# Interactive Graph
+# =========================
+st.subheader("📊 Demand vs Temperature")
 
-fig1, ax1 = plt.subplots()
-df.groupby("mnth")["cnt"].mean().plot(kind="bar", ax=ax1)
-ax1.set_title("Average Demand per Month")
-st.pyplot(fig1)
+fig, ax = plt.subplots()
+ax.scatter(df["temp"], df["cnt"])
+ax.set_xlabel("Temperature (°C)")
+ax.set_ylabel("Bike Demand")
+ax.set_title("Bike Demand vs Temperature")
+st.pyplot(fig)
 
-fig2, ax2 = plt.subplots()
-df.groupby("hr")["cnt"].mean().plot(kind="line", ax=ax2)
-ax2.set_title("Average Demand per Hour")
-st.pyplot(fig2)
-
-fig3, ax3 = plt.subplots()
-ax3.scatter(df["temp"], df["cnt"])
-ax3.set_xlabel("Temperature")
-ax3.set_ylabel("Bike Demand")
-ax3.set_title("Temperature vs Bike Demand")
-st.pyplot(fig3)
-
-
-st.markdown("---")
-st.caption(Project - "Bike Demand Prediction System | Group-1: Chanakya, Krishna et al. | Streamlit + Random Forest")
-
-
-
-
-
+# =========================
+# Footer
+# =========================
+st.caption("Project - Bike Demand Prediction System | Group-1: Chanakya, Krishna et al. | Streamlit + Random Forest")
