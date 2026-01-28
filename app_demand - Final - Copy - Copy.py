@@ -94,16 +94,25 @@ st.success("✅ Model trained successfully")
 st.subheader("🔧 Enter Input Conditions")
 input_data = {}
 
+symbol_map = {
+    "temp": "🌡️ Temp (°C)",
+    "atemp": "🤖 Atemp (°C)",
+    "hum": "💧 Humidity (%)",
+    "windspeed": "🌬️ Windspeed (km/h)"
+}
+
 for col in features:
     if col in categorical_cols:
         le = label_encoders[col]
-        selected = st.selectbox(col.capitalize(), le.classes_)
+        options = [cls for cls in le.classes_ if pd.notna(cls)]
+        selected = st.selectbox(col.capitalize(), options)
         input_data[col] = le.transform([selected])[0]
     else:
         min_val = float(X[col].min())
         max_val = float(X[col].max())
         mean_val = float(X[col].mean())
-        input_data[col] = st.slider(col.capitalize(), min_val, max_val, mean_val)
+        label = symbol_map.get(col, col.capitalize())
+        input_data[col] = st.slider(label, min_val, max_val, mean_val)
 
 input_df = pd.DataFrame([input_data])
 
@@ -136,4 +145,4 @@ ax3.set_ylabel("Bike Demand")
 ax3.set_title("Temperature vs Bike Demand")
 st.pyplot(fig3)
 
-st.caption("Bike Sharing Demand Prediction System | Random Forest + Streamlit")
+st.caption("Project - Bike Sharing Demand Prediction System | Group-1: Chanakya, Krishna et al. | Random Forest + Streamlit")
